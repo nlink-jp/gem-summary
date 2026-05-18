@@ -4,11 +4,23 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/nlink-jp/gem-summary/internal/vertexai"
 	"github.com/nlink-jp/nlk/guard"
 )
+
+// fakeClientFunc lets tests script the per-call response so a
+// single test can assert chunk-vs-merge dispatch by inspecting
+// the system prompt.
+type fakeClientFunc struct {
+	fn func(systemPrompt, userPrompt string) (*vertexai.Response, error)
+}
+
+func (c *fakeClientFunc) Generate(_ context.Context, systemPrompt, userPrompt string) (*vertexai.Response, error) {
+	return c.fn(systemPrompt, userPrompt)
+}
 
 // fakeClient is a minimal stub that records the last call and
 // returns a canned response. Used in place of *vertexai.Client
@@ -194,20 +206,141 @@ func TestSummarize_HappyPath(t *testing.T) {
 	}
 }
 
-// TestSummarize_OverLimit pins the Phase-1 "reject when too
-// big" contract that Phase 2 will replace with chunking.
-func TestSummarize_OverLimit(t *testing.T) {
-	fc := &fakeClient{}
-	long := strings.Repeat("token ", 1000)
+// TestSummarize_ChunkedPath verifies that an over-threshold
+// input flows through the chunked path: multiple chunk
+// summaries get produced (via the fake client) and a merge
+// call wraps them up. The fake client returns "CHUNK n" /
+// "MERGED" responses based on a counter so the assertions can
+// see the chain of calls.
+func TestSummarize_ChunkedPath(t *testing.T) {
+	// ~6000-char input → ~1500 estimated tokens, over the
+	// 1000-token MaxInputTokens cap so the chunked path
+	// activates. ChunkSize=200 gives ~10 chunks; the merge
+	// prompt with 10 "CHUNK" stubs lands well under the cap,
+	// so exactly one merge call.
+	long := strings.Repeat("paragraph one. ", 400)
+
+	var mu sync.Mutex
+	var calls []string
+	fc := &fakeClientFunc{
+		fn: func(systemPrompt, userPrompt string) (*vertexai.Response, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			isMerge := strings.Contains(systemPrompt, "merging multiple")
+			if isMerge {
+				calls = append(calls, "merge")
+				return &vertexai.Response{Text: "MERGED", InputTokens: 200, OutputTokens: 50}, nil
+			}
+			calls = append(calls, "chunk")
+			return &vertexai.Response{Text: "CHUNK", InputTokens: 100, OutputTokens: 20}, nil
+		},
+	}
+	res, err := Summarize(context.Background(), fc, long, Options{
+		Style:            StyleMedium,
+		MaxInputTokens:   1000, // doc ~1300 tokens → chunked path
+		ChunkSize:        200,
+		ChunkOverlap:     10,
+		ChunkParallelism: 3,
+	})
+	if err != nil {
+		t.Fatalf("Summarize: %v", err)
+	}
+	if res.Summary != "MERGED" {
+		t.Errorf("Summary = %q, want MERGED", res.Summary)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	chunkCount := 0
+	mergeCount := 0
+	for _, c := range calls {
+		switch c {
+		case "chunk":
+			chunkCount++
+		case "merge":
+			mergeCount++
+		}
+	}
+	if chunkCount < 2 {
+		t.Errorf("expected ≥2 chunk calls, got %d", chunkCount)
+	}
+	if mergeCount != 1 {
+		t.Errorf("expected exactly 1 merge call, got %d", mergeCount)
+	}
+	// Result.Chunks should include the merge call (chunks + merge).
+	if res.Chunks != chunkCount+mergeCount {
+		t.Errorf("Result.Chunks = %d, want %d (%d chunks + %d merge)",
+			res.Chunks, chunkCount+mergeCount, chunkCount, mergeCount)
+	}
+	// Tokens should be aggregated.
+	wantIn := chunkCount*100 + mergeCount*200
+	wantOut := chunkCount*20 + mergeCount*50
+	if res.InputTokens != wantIn || res.OutputTokens != wantOut {
+		t.Errorf("aggregated tokens: in=%d out=%d, want in=%d out=%d",
+			res.InputTokens, res.OutputTokens, wantIn, wantOut)
+	}
+}
+
+// TestSummarize_ChunkedPath_PropagatesError pins the error
+// path: if a per-chunk generate fails, Summarize returns
+// (nil, err) and does NOT swallow partial results.
+func TestSummarize_ChunkedPath_PropagatesError(t *testing.T) {
+	long := strings.Repeat("paragraph one. ", 1000)
+	chunkErr := errors.New("simulated 429")
+	var mu sync.Mutex
+	calls := 0
+	fc := &fakeClientFunc{
+		fn: func(systemPrompt, userPrompt string) (*vertexai.Response, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			calls++
+			// Fail on the 2nd chunk call to exercise the
+			// cancellation path.
+			if calls == 2 {
+				return nil, chunkErr
+			}
+			return &vertexai.Response{Text: "ok"}, nil
+		},
+	}
 	_, err := Summarize(context.Background(), fc, long, Options{
-		Style:          StyleMedium,
-		MaxInputTokens: 100,
+		Style:            StyleMedium,
+		MaxInputTokens:   500,
+		ChunkSize:        100,
+		ChunkParallelism: 1, // serial so the 2nd call is deterministically 2nd
 	})
 	if err == nil {
-		t.Fatal("expected over-limit error, got nil")
+		t.Fatal("expected chunked error, got nil")
 	}
-	if !errors.Is(err, ErrInputTooLarge) {
-		t.Errorf("expected ErrInputTooLarge, got: %v", err)
+	if !strings.Contains(err.Error(), "simulated 429") {
+		t.Errorf("error didn't propagate chunk error string: %v", err)
+	}
+}
+
+// TestSummarize_SingleChunkFallsThroughToSingleCall pins the
+// optimisation: when the chunker produces only 1 chunk
+// (because the doc fits in one window) the merge call is
+// skipped — no point paying for a merge LLM round on a
+// single-chunk doc.
+func TestSummarize_SingleChunkFallsThroughToSingleCall(t *testing.T) {
+	doc := "this is a moderately sized input"
+	fc := &fakeClientFunc{
+		fn: func(systemPrompt, _ string) (*vertexai.Response, error) {
+			if strings.Contains(systemPrompt, "merging multiple") {
+				t.Error("merge call should not happen for single-chunk fallback")
+			}
+			return &vertexai.Response{Text: "single", InputTokens: 5, OutputTokens: 2}, nil
+		},
+	}
+	res, err := Summarize(context.Background(), fc, doc, Options{
+		Style:          StyleMedium,
+		MaxInputTokens: 3,           // tiny cap forces chunked entry
+		ChunkSize:      10_000_000,  // but chunks are huge → 1 chunk
+	})
+	if err != nil {
+		t.Fatalf("Summarize: %v", err)
+	}
+	if res.Chunks != 1 {
+		t.Errorf("Chunks = %d, want 1 (single-chunk fallback)", res.Chunks)
 	}
 }
 
