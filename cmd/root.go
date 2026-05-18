@@ -129,13 +129,20 @@ func run(cmd *cobra.Command, args []string) error {
 	if flagMaxInputTokens > 0 {
 		maxIn = flagMaxInputTokens
 	}
+	chunkSize := cfg.Summary.ChunkSize
+	if flagChunkSize > 0 {
+		chunkSize = flagChunkSize
+	}
 
 	t0 := time.Now()
 	res, err := summarizer.Summarize(ctx, client, doc, summarizer.Options{
-		Style:          style,
-		Lang:           flagLang,
-		MaxInputTokens: maxIn,
-		Progress:       progress,
+		Style:            style,
+		Lang:             flagLang,
+		MaxInputTokens:   maxIn,
+		ChunkSize:        chunkSize,
+		ChunkOverlap:     cfg.Summary.ChunkOverlap,
+		ChunkParallelism: cfg.Summary.ChunkParallelism,
+		Progress:         progress,
 	})
 	if err != nil {
 		return err
