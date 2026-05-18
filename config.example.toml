@@ -1,0 +1,39 @@
+# gem-summary configuration template.
+#
+# Copy to ~/.config/gem-summary/config.toml and edit, or override
+# any field via environment variables (see README for the
+# precedence order). The schema mirrors the other gem-* tools:
+# [gcp] + [model] + a tool-specific section ([summary] here).
+
+[gcp]
+project  = "your-project-id"
+location = "us-central1"
+
+[model]
+# Default model. The intent of gem-summary is to do single-call
+# summarisation; pick a model with a generous context window.
+# Switch to gemini-3.x once it GAs (see RFP §7).
+name = "gemini-2.5-flash"
+
+[summary]
+# Output length preset applied when --style is not given on the
+# CLI. One of: short, medium, long.
+default_style = "medium"
+
+# Chunking is a fallback path for inputs larger than the model's
+# practical context window. chunk_threshold sets the input-token
+# count above which gem-summary splits the input into chunks of
+# chunk_size tokens (with chunk_overlap of overlap between
+# adjacent chunks) and summarises each chunk in parallel, then
+# re-summarises the merged chunk-summaries.
+chunk_threshold   = 400000
+chunk_size        = 200000
+chunk_overlap     = 2000
+chunk_parallelism = 3
+
+# Output budget reserved on every LLM call. Subtracted from the
+# model's effective input cap when deciding whether to chunk.
+output_reserve = 4096
+
+# Per-call request timeout in seconds.
+request_timeout = 180
