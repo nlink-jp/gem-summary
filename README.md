@@ -1,8 +1,9 @@
 # gem-summary
 
-> **Status:** Scaffolding (Phase 2 of the [RFP](docs/en/gem-summary-rfp.md)).
-> Core summarisation is not yet wired — the CLI prints a notice on stderr.
-> Track Phase 1 / 2 / 3 progress in [CHANGELOG](CHANGELOG.md).
+> **Status:** v0.1.0 released (2026-05-18). Phases 1 and 2 of the
+> [RFP](docs/en/gem-summary-rfp.md) are implemented. Phase 3
+> (shell-agent-v2 wrapper) lands separately in the
+> shell-agent-v2 repository; gem-summary works standalone.
 
 Single-purpose text summarisation CLI for the `nlink-jp` util-series.
 Reads a `.md` / `.txt` file (or stdin) and emits a summary on stdout via

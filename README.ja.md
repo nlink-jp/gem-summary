@@ -1,8 +1,10 @@
 # gem-summary
 
-> **ステータス:** Scaffolding (RFP [docs/ja/gem-summary-rfp.ja.md](docs/ja/gem-summary-rfp.ja.md) の Phase 2)。
-> 要約処理本体は未配線 — CLI は stderr に通知メッセージを出すのみ。
-> Phase 1 / 2 / 3 の進捗は [CHANGELOG](CHANGELOG.md) を参照。
+> **ステータス:** v0.1.0 リリース済 (2026-05-18)。RFP
+> [docs/ja/gem-summary-rfp.ja.md](docs/ja/gem-summary-rfp.ja.md)
+> の Phase 1 / 2 を実装。Phase 3 (shell-agent-v2 ラッパー) は
+> shell-agent-v2 リポジトリ側で別途実施 — gem-summary 単独で
+> 完全動作。
 
 `nlink-jp` util-series の単一機能テキスト要約 CLI。`.md` / `.txt` ファイル
 (または stdin) を読み、Vertex AI Gemini に対する **1 回の LLM call**
