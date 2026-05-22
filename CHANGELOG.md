@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-05-22
+
+### Changed
+
+- **Darwin releases are now Developer ID signed and Apple-notarized.**
+  `gem-summary-v0.1.1-darwin-{amd64,arm64}.zip` carry full Apple
+  Developer ID Application signatures and notarization tickets from
+  Apple. End users on macOS no longer need to bypass Gatekeeper
+  with right-click → Open or `xattr -d com.apple.quarantine` on
+  first launch; local users who place `gem-summary` under
+  Dropbox-synced (or any other FileProvider-managed) paths are no
+  longer killed by macOS's ad-hoc + provenance distrust policy.
+  Pipeline: `scripts/codesign-darwin.sh` +
+  `scripts/notarize-darwin.sh`, driven by `make package`. Adopts
+  the org-wide convention in `nlink-jp/.github` CONVENTIONS.md
+  §Code Signing.
+
+No behaviour change to the binary itself — feature-wise this is
+identical to v0.1.0.
+
 ## [0.1.0] - 2026-05-18
 
 First release. gem-summary is a single-purpose Vertex AI
