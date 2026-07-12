@@ -26,7 +26,7 @@ shell-agent-v2 shell-tool (`examples/shell_tools/summary.sh`).
 ```sh
 make build          # → dist/gem-summary
 make test           # or: go test ./...
-make build-all      # cross-compile 5 platforms
+make build-all      # cross-compile 4 platforms (darwin arm64 only; no Intel)
 ```
 
 ## Configuration
