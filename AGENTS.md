@@ -18,6 +18,7 @@ built-in `analyze-text`.
 make build          # dist/gem-summary
 make test           # or: go test ./...
 make build-all      # 5-platform cross-compile (Linux x64/ARM, macOS x64/ARM, Windows x64)
+make verify-release  # gate: .notarized marker + freshness (run before upload)
 make clean
 ```
 
