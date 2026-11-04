@@ -3,8 +3,8 @@ module github.com/nlink-jp/gem-summary
 go 1.26.2
 
 require (
-	github.com/BurntSushi/toml v1.6.0
 	github.com/nlink-jp/nlk v0.5.2
+	github.com/nlink-jp/toml v0.1.1
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/genai v1.57.0
 )

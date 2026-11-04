@@ -39,7 +39,8 @@ make build      # → dist/gem-summary
 
 `gem-summary` は `~/.config/gem-summary/config.toml` を読む。
 [`config.example.toml`](config.example.toml) をコピーして編集、または
-下表の環境変数で個別フィールドを上書き。
+下表の環境変数で個別フィールドを上書き。設定ファイルにある知らないキー
+（打ち間違いなど）は黙って無視せず、そのキー名を示してエラーにする。
 
 ```toml
 [gcp]

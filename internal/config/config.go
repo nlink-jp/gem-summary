@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/BurntSushi/toml"
+	"github.com/nlink-jp/toml"
 )
 
 // Built-in defaults applied when neither the config file nor an

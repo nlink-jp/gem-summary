@@ -53,7 +53,7 @@ Settings load order: built-in defaults → TOML file → env vars → CLI flags.
 - `google.golang.org/genai` — Vertex AI Gemini SDK
 - `github.com/nlink-jp/nlk` — `guard` (prompt-injection defence) + `backoff` (Vertex AI retry) + `jsonfix`
 - `github.com/spf13/cobra` — CLI framework
-- `github.com/BurntSushi/toml` — config file parsing
+- `github.com/nlink-jp/toml` — config file parsing (strict: an unknown key is an error)
 
 ## Architecture (planned)
 

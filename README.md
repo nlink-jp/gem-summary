@@ -43,7 +43,8 @@ available from the GitHub Releases page.
 
 `gem-summary` reads `~/.config/gem-summary/config.toml`. Copy
 [`config.example.toml`](config.example.toml) and edit, or override any
-field via the env vars in the table below.
+field via the env vars in the table below. A key the file does not know —
+a typo, say — is an error that names it, not a setting silently ignored.
 
 ```toml
 [gcp]
