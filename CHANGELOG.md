@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-11-14
+
+### Security
+
+- **`golang.org/x/net` is updated from v0.38.0 to v0.62.0.** The connection
+  to Vertex AI ran on x/net's own HTTP/2, not the standard library's: the
+  SDK's default client configures it that way when a tool does not supply a
+  transport of its own. Measured — a request through the same client
+  against a local server was handled by `golang.org/x/net/http2`. Three
+  advisories apply to an HTTP/2 client there (GO-2026-4918, -6610, -6611);
+  each needs the server end of the connection, which is Google's endpoint
+  under TLS. With v0.62.0 built by Go 1.27 the same request is handled by
+  the standard library, where they are fixed from Go 1.27.2.
+- `grpc` moves from v1.66.2 to v1.83.2, `x/text` to v0.43.0 and `x/crypto`
+  to v0.58.0, for advisories `govulncheck` traced through code this build
+  does not run (the gRPC path is taken only when S2A is switched on).
+  `grpc` v1.83.2 requires `cloud.google.com/go/auth` v0.18.2, so that
+  moves from v0.9.3 with it. The Vertex AI SDK is unchanged (v1.57.0).
+  The new set was checked against a local server, not against the live
+  endpoint.
+
+### Changed
+
+- **Building from source needs Go 1.27.4 or later** (`go.mod`; it was
+  1.26.2), so that no build uses a standard library with the HTTP/2
+  advisories above.
+- **`make package` runs the vulnerability check first** (`make vuln`), so a
+  release cannot be built past a finding.
+
 ## [0.3.0] - 2026-11-04
 
 ### Changed
