@@ -18,6 +18,7 @@ built-in `analyze-text`.
 make build          # dist/gem-summary
 make test           # or: go test ./...
 make build-all      # 5-platform cross-compile (Linux x64/ARM, macOS x64/ARM, Windows x64)
+make vuln            # govulncheck over the build; `make package` runs it first and stops on a finding
 make verify-release  # gate: notarized, fresh, runs at this version, clean linux archives (run before upload)
 make clean
 ```
