@@ -81,14 +81,9 @@ Env-var overrides use the `GEMSUMMARY_*` prefix (no underscore between
 
 ## Release process
 
-After Phase 3 completes:
-
-1. Update `CHANGELOG.md`
-2. Commit `chore: release vX.Y.Z` → tag → push
-3. `gh release create` (no assets)
-4. `make build-all` → zip each binary + `README.md` → upload
-5. Add as submodule under `nlink-jp/util-series`
-6. Update `nlink-jp/.github/profile/README.md` (alphabetical)
+Follow [CONVENTIONS.md §Release Checklist](https://github.com/nlink-jp/.github/blob/main/CONVENTIONS.md#release-checklist):
+`make vuln` on the release commit before tagging, and `gh release create` only
+after `make package` and `make verify-release` have passed.
 
 ## Gotchas
 
